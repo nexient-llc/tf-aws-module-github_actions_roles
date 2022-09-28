@@ -14,19 +14,19 @@
 
 data "aws_iam_policy_document" "assume_role" {
   statement {
-    actions = [ "sts:AssumeRoleWithWebIdentity" ]
+    actions = ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
-      type = "Federated"
-      identifiers = [ aws_iam_openid_connect_provider.github.arn ]
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
     }
 
     condition {
-      test = "StringLike"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        for repo in var.github_repositories : "repo:${var.github_org}/${repo}:*"
+        for repo in var.github_repos : "repo:${var.github_org}/${repo}:*"
       ]
     }
 
@@ -43,8 +43,8 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
-  url = var.oidc_url
-  client_id_list = var.client_id_list
+  url             = var.oidc_url
+  client_id_list  = var.client_id_list
   thumbprint_list = var.thumbprint_list
   tags = {
     terraform = "true"
@@ -52,20 +52,22 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 
 resource "aws_iam_role" "github" {
-  name = var.iam_role_name
-  description = var.iam_role_description
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
-  max_session_duration = var.max_session_duration
-  path = var.iam_role_path
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/${var.iam_role_policy}"
-  ]
+  name                  = var.iam_role_name
+  description           = var.iam_role_description
+  assume_role_policy    = data.aws_iam_policy_document.assume_role.json
+  max_session_duration  = var.max_session_duration
+  path                  = var.iam_role_path
+  force_detach_policies = true
   tags = {
     terraform = "true"
   }
 }
 
-resource "aws_iam_role_policy_attachment" "policy" {
-  role = aws_iam_role.github.id
-  policy_arn = "arn:aws:iam::aws:policy/${var.iam_role_policy}"
+resource "aws_iam_policy_attachment" "policy" {
+  for_each = var.policy_arns
+
+  name       = each.key
+  roles      = [aws_iam_role.github.id]
+  policy_arn = each.value
+
 }
