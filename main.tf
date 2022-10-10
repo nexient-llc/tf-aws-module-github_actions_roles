@@ -31,9 +31,15 @@ data "aws_iam_policy_document" "assume_role" {
     }
 
     condition {
-      test = "StringLike"
+      test = "ForAllValues:StringLike"
       variable = "token.actions.githubusercontent.com:aud"
       values = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test = "ForAllValues:StringLike"
+      variable = "token.actions.githubusercontent.com:iss"
+      values = [var.oidc_url]
     }
 
     dynamic "condition" {
